@@ -25,6 +25,7 @@ func main() {
 	deploymentKey := fs.String("deployment-key", "deployment", "Key to use to differentiate between two different controllers.")
 	controllerName := fs.String("controller-name", "", "Name of the replication controller to update.")
 	k8sEndpoint := fs.String("k8s-endpoint", "http://localhost:8080", "URL of the Kubernetes API server")
+	useServiceAccount := fs.Bool("use-service-account", false, "Enable this to use service accounts.")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -41,9 +42,10 @@ func main() {
 	}
 
 	k := &Krud{
-		DeploymentKey:  *deploymentKey,
-		ControllerName: *controllerName,
-		Endpoint:       *k8sEndpoint,
+		DeploymentKey:     *deploymentKey,
+		ControllerName:    *controllerName,
+		Endpoint:          *k8sEndpoint,
+		UseServiceAccount: *useServiceAccount,
 	}
 
 	http.HandleFunc("/push", k.push)
@@ -52,9 +54,10 @@ func main() {
 }
 
 type Krud struct {
-	DeploymentKey  string
-	ControllerName string
-	Endpoint       string
+	DeploymentKey     string
+	ControllerName    string
+	Endpoint          string
+	UseServiceAccount bool
 
 	// Hooks contains all incoming webhooks
 	Hooks []*Webhook
@@ -226,6 +229,18 @@ func (k *Krud) update(h *Webhook) error {
 	conf := &client.Config{
 		Host: k.Endpoint,
 	}
+
+	if k.UseServiceAccount {
+		tokenFile := "/var/run/secrets/kubernetes.io/serviceaccount/token"
+		caCertFile := "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+		token, err := ioutil.ReadFile(tokenFile)
+		if err != nil {
+			return err
+		}
+		conf.BearerToken = string(token)
+		conf.TLSClientConfig = client.TLSClientConfig{CAFile: caCertFile}
+	}
+
 	client, err := client.New(conf)
 	if err != nil {
 		return err
