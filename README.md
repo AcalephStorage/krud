@@ -28,6 +28,7 @@ Optional:
 - `KRUD_K8S_ENDPOINT`: kubernetes endpoint; defaults to `http://localhost:8080`
 - `KRUD_LISTEN`: listen address; defaults to `:9500`
 - `KRUD_NAMESPACE`: the namespace the replication controller belongs to; defaults to `default`
+- `KRUD_USER_SERVICE_ACCOUNT`: kubernetes authentication via service account; defaults to `false`
 
 These options can also be specified on the command line. See `krud -help` for usage.
 
